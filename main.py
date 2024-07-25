@@ -64,14 +64,15 @@ def download():
                 point.name + ' ' + point.units_of_measurement)
             for point in points], axis=1)
 
-        logging.info("Cleaning up columns")        
+        logging.info("Cleaning and sorting scolumns")
         df.index.rename('Timestamp', inplace=True)
+        df.sort_index(axis=1, inplace=True)
 
         # The encoding is off. Temporary workaround is to write the dataframe as a CSV, which fixes the encoding. Then read it in.
         df.to_csv("temp.csv")
         df = pd.read_csv("temp.csv")
 
-        # We frequently see columns returned full of "Shutdown" comments because a instrument no longer works.
+        # We frequently see columns returned full of "Shutdown" comments because na instrument no longer works.
         # If the entire column is full of those, delete the whole column.
 
         #df.replace("Shutdown", np.nan, inplace=True)
