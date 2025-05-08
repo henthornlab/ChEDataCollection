@@ -194,7 +194,6 @@ def tester():
 
 
 if __name__ == '__main__':
-    print("starting")
     logging.info("Starting %s version %s", CONST_NAME, CONST_VER)
     logging.info("Written by %s", CONST_AUTHORS)
 
