@@ -76,7 +76,7 @@ def download():
 
         #df.replace("Shutdown", np.nan, inplace=True)
         logging.info("Replacing non-numeric entries") 
-        df.replace("Shutdown", float(np.NaN), inplace=True)
+        df.replace("Shutdown", float(np.nan), inplace=True)
         df.dropna(how='all', axis=1, inplace=True)
 
         response = make_response(df.to_csv(date_format='%H:%M:%S'))
@@ -194,6 +194,7 @@ def tester():
 
 
 if __name__ == '__main__':
+    print("starting")
     logging.info("Starting %s version %s", CONST_NAME, CONST_VER)
     logging.info("Written by %s", CONST_AUTHORS)
 
