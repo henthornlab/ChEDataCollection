@@ -21,7 +21,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', datefmt=
 
 
 app = Flask(__name__)
-
+print("hello world")
 
 @app.route('/')
 @app.route('/home')
