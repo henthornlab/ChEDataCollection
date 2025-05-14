@@ -19,7 +19,7 @@ import logging
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', datefmt='%Y/%m/%d %H:%M:%S', level=logging.INFO)
 
-
+server = PI.PIServer()
 app = Flask(__name__)
 
 @app.route('/')
