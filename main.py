@@ -18,7 +18,8 @@ import pandas as pd
 import numpy as np
 import logging
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', datefmt='%Y/%m/%d %H:%M:%S', level=logging.INFO)
+
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', datefmt='%Y/%m/%d %H:%M:%S', level=logging.DEBUG)
 
 server = PI.PIServer()
 #We added this server definition here because we believe it is defined somewhere else when running in the terminal
@@ -28,20 +29,20 @@ project = ""
 @app.route('/')
 @app.route('/home')
 def home():
-    logging.info("New request for /home from %s", request.remote_addr)
+    logger.info("New request for /home from %s", request.remote_addr)
     return render_template('home.html')
 
 @app.route('/project')
 def project():
-    logging.info("New request for /project from %s", request.remote_addr)
+    logger.info("New request for /project from %s", request.remote_addr)
     return render_template('project.html')
 
 @app.route('/instrumentation', methods=[ "GET" ])
 def instrumentation():
     project = request.args.get("project")
-    logging.info("New request for /instrumentation from %s", request.remote_addr)
+    logger.info("New request for /instrumentation from %s", request.remote_addr)
     project_num = "*" + project + "*"
-    logging.info("Received request for project %s from IP %s", project, request.remote_addr)
+    logger.info("Received request for project %s from IP %s", project, request.remote_addr)
 
     if project_num =="*300*":
         search_term = "*-3*"
@@ -51,20 +52,20 @@ def instrumentation():
     points = server.search(search_term)
 
     if len(points) == 0:
-        logging.error("Found no PI datapoints for search term %s", search_term)
+        logger.error("Found no PI datapoints for search term %s", search_term)
         return render_template('instrumentation.html',
                              error=f"Found no PI datapoints for search term: {search_term}")
 
     else:
-        logging.info("Found %s PI points for project %s", len(points), project)
-        logging.info("Colecting instruments")
+        logger.info("Found %s PI points for project %s", len(points), project)
+        logger.info("Colecting instruments")
         instruments = [f"{point.name}" for point in points]
         return render_template('instrumentation.html', options=instruments, project=project)
 
 @app.route('/download', methods=["POST"])
 def download():
     project = request.form.get("project")
-    logging.info("Received download request for project %s from IP %s", project, request.remote_addr)
+    logger.info("Received download request for project %s from IP %s", project, request.remote_addr)
     date = request.form.get("start")
     start_time = request.form.get("starttime")
     end_time = request.form.get("endtime")
@@ -74,7 +75,7 @@ def download():
     project_start = date + " " + start_time
     project_end = date + " " + end_time
 
-    logging.info("Requested dataset with start time of %s, end time of %s, and interval of %s",
+    logger.info("Requested dataset with start time of %s, end time of %s, and interval of %s",
                  project_start, project_end, interval)
 
     if project_num == "*300*":
@@ -85,17 +86,17 @@ def download():
     points = server.search(search_term)
 
     if len(points) == 0:
-        logging.error("Found no PI datapoints for search term %s", search_term)
+        logger.error("Found no PI datapoints for search term %s", search_term)
         return 'Found no PI datapoints for search term' + search_term
     else:
-        logging.info("Found %s PI points for project %s", len(points), project)
-        logging.info("Concatenating")
+        logger.info("Found %s PI points for project %s", len(points), project)
+        logger.info("Concatenating")
         df = pd.concat([
             point.interpolated_values(project_start, project_end, interval).to_frame(
                 point.name + ' ' + point.units_of_measurement)
             for point in points], axis=1)
 
-        logging.info("Cleaning and sorting scolumns")
+        logger.info("Cleaning and sorting scolumns")
         df.index.rename('Timestamp', inplace=True)
         df.sort_index(axis=1, inplace=True)
 
@@ -107,7 +108,7 @@ def download():
         # If the entire column is full of those, delete the whole column.
 
         # df.replace("Shutdown", np.nan, inplace=True)
-        logging.info("Replacing non-numeric entries")
+        logger.info("Replacing non-numeric entries")
         df.replace("Shutdown", float(np.nan), inplace=True)
         df.dropna(how='all', axis=1, inplace=True)
 
@@ -115,13 +116,13 @@ def download():
         csvname = 'AREA' + project + '-' + date + '.csv'
         response.headers['Content-Disposition'] = 'attachment; filename=' + csvname
         response.mimetype = 'text/csv'
-        logging.info("Sending CSV file %s over http with response info %s", csvname, response)
+        logger.info("Sending CSV file %s over http with response info %s", csvname, response)
         return response
 @app.route('/download2', methods=["POST"])
 def download2():
     selected_instruments = request.form.getlist("instruments")
     project = request.form.get("project")
-    logging.info("Received download request for project %s from IP %s", project, request.remote_addr)
+    logger.info("Received download request for project %s from IP %s", project, request.remote_addr)
     date = request.form.get("start")
     start_time = request.form.get("starttime")
     end_time = request.form.get("endtime")
@@ -133,18 +134,18 @@ def download2():
 
     points = server.search(selected_instruments)
 
-    logging.info("Requested dataset with start time of %s, end time of %s, and interval of %s",
+    logger.info("Requested dataset with start time of %s, end time of %s, and interval of %s",
                  project_start, project_end, interval)
 
 
-   # logging.info("Found %s PI points for project %s", len(points), project)
-    logging.info("Concatenating")
+   # logger.info("Found %s PI points for project %s", len(points), project)
+    logger.info("Concatenating")
     df = pd.concat([
         point.interpolated_values(project_start, project_end, interval).to_frame(
             point.name + ' ' + point.units_of_measurement)
         for point in points], axis=1)
 
-    logging.info("Cleaning and sorting scolumns")
+    logger.info("Cleaning and sorting scolumns")
     df.index.rename('Timestamp', inplace=True)
     df.sort_index(axis=1, inplace=True)
 
@@ -156,7 +157,7 @@ def download2():
     # If the entire column is full of those, delete the whole column.
 
     #df.replace("Shutdown", np.nan, inplace=True)
-    logging.info("Replacing non-numeric entries")
+    logger.info("Replacing non-numeric entries")
     df.replace("Shutdown", float(np.nan), inplace=True)
     df.dropna(how='all', axis=1, inplace=True)
 
@@ -165,7 +166,7 @@ def download2():
     #We can change the name of the downloaded csv file by changing the above line of code
     response.headers['Content-Disposition'] = 'attachment; filename=' + csvname
     response.mimetype = 'text/csv'
-    logging.info("Sending CSV file %s over http with response info %s", csvname, response)
+    logger.info("Sending CSV file %s over http with response info %s", csvname, response)
     return response
     
 
@@ -178,19 +179,19 @@ def csv():
     and interval is time in seconds
     """
 
-    logging.info('New request for /csv from %s', request.remote_addr)
+    logger.info('New request for /csv from %s', request.remote_addr)
     if request.args:
         req1 = DataRequest(request.args)
         req1.validate()
         if req1.is_valid:
-            logging.info('Valid request %s', req1)
+            logger.info('Valid request %s', req1)
             points = server.search(req1.labarea.search_term)
 
             if len(points) == 0:
-                logging.error("Found no PI datapoints for search term %s", req1.labarea.search_term)
+                logger.error("Found no PI datapoints for search term %s", req1.labarea.search_term)
                 return 'Found no PI datapoints for search term'
             else:
-                logging.info("Found %s PI points for project %s", len(points), req1.area)
+                logger.info("Found %s PI points for project %s", len(points), req1.area)
                 df = pd.concat([point.interpolated_values(req1.date1, req1.date2, req1.interval).to_frame(point.name + ' '
                     + point.units_of_measurement) for point in points], axis=1)
 
@@ -200,13 +201,13 @@ def csv():
                 csvname = 'AREA' + req1.area + '-' + req1.startdate + '.csv'
                 response.headers['Content-Disposition'] = 'attachment; filename=' + csvname
                 response.mimetype = 'text/csv'
-                logging.info("Sending CSV file %s over http with response info %s", csvname, response)
+                logger.info("Sending CSV file %s over http with response info %s", csvname, response)
                 return response
         else:
-            logging.error('Error in /csv route: %s', req1.errors_to_text())
+            logger.error('Error in /csv route: %s', req1.errors_to_text())
             return req1.errors_to_text()
     else:
-        logging.info('Received empty request to /csv endpoint. Sending instructions.')
+        logger.info('Received empty request to /csv endpoint. Sending instructions.')
         response = '<html><body>'
         response += 'Empty request:<br><br><br>'
         response += ('Example usage: http://hostname:port/csv?startdate=2022-05-01&starttime=18:00' +
@@ -224,19 +225,19 @@ def excel():
     and interval is time in seconds
     """
 
-    logging.info('New request for /excel from %s', request.remote_addr)
+    logger.info('New request for /excel from %s', request.remote_addr)
     if request.args:
         req1 = DataRequest(request.args)
         req1.validate()
         if req1.is_valid:
-            logging.info('Valid request %s', req1)
+            logger.info('Valid request %s', req1)
             points = server.search(req1.labarea.search_term)
 
             if len(points) == 0:
-                logging.error("Found no PI datapoints for search term %s", req1.labarea.search_term)
+                logger.error("Found no PI datapoints for search term %s", req1.labarea.search_term)
                 response = 'Found no PI datapoints for search term'
             else:
-                logging.info("Found %s PI points for project %s", len(points), req1.area)
+                logger.info("Found %s PI points for project %s", len(points), req1.area)
                 df = pd.concat([point.interpolated_values(req1.date1, req1.date2, req1.interval).to_frame(point.name + ' '
                     + point.units_of_measurement) for point in points], axis=1)
 
@@ -246,13 +247,13 @@ def excel():
                 excelname = 'AREA' + req1.area + '-' + req1.startdate + '.xls'
                 response.headers['Content-Disposition'] = 'attachment; filename=' + excelname
                 response.mimetype = 'application/vnd.ms-excel'
-                logging.info("Sending excel file %s over http with response info %s", excelname, response)
+                logger.info("Sending excel file %s over http with response info %s", excelname, response)
                 return response
         else:
-            logging.error('Error in /excel route: %s', req1.errors_to_text())
+            logger.error('Error in /excel route: %s', req1.errors_to_text())
             return req1.errors_to_text()
     else:
-        logging.info('Received empty request to /excel endpoint. Sending instructions.')
+        logger.info('Received empty request to /excel endpoint. Sending instructions.')
         response = '<html><body>'
         response += 'Empty request:<br><br><br>'
         response += ('Example usage: http://hostname:port/excel?startdate=2022-05-01&starttime=18:00' +
@@ -266,7 +267,7 @@ def tester():
     """
     This is a route used for testing. Sends a CSV file filled with zeros to the client.
     """
-    logging.info('In /tester route. Sending CSV of zeroes for testing.')
+    logger.info('In /tester route. Sending CSV of zeroes for testing.')
     df = pd.DataFrame(np.zeros((10, 5)))
     response = make_response(df.to_csv())
     csvname = 'tester.csv'
@@ -276,17 +277,35 @@ def tester():
 
 
 if __name__ == '__main__':
-    logging.info("Starting %s version %s", CONST_NAME, CONST_VER)
-    logging.info("Written by %s", CONST_AUTHORS)
 
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    
+    fh = logging.FileHandler('requests.log')
+    fh.setLevel(logging.DEBUG)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+
+
+    logger.info("Starting %s version %s", CONST_NAME, CONST_VER)
+    logger.info("Written by %s", CONST_AUTHORS)
+    
     # Let's attempt to keep the PI server connection open here in main. Otherwise, we need to connect each time
     # we enter the /download route, which results in much longer wait times
 
-    logging.info("Attempting to connect to PI Server using the PI SDK")
+    logger.info("Attempting to connect to PI Server using the PI SDK")
     PI.PIConfig.DEFAULT_TIMEZONE = 'America/Indianapolis'
     try:
         with PI.PIServer() as server:
-            logging.info("Connected to PI Server %s which is running version %s", server.server_name, server.version)
+            logger.info("Connected to PI Server %s which is running version %s", server.server_name, server.version)
             app.run(host="0.0.0.0")
     except Exception as e:
-        logging.error('PI Server or WSGI server failed. Exception %s', e)
+        logger.error('PI Server or WSGI server failed. Exception %s', e)
