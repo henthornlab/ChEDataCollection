@@ -1,0 +1,68 @@
+{%  extends 'base.html' %}
+{% block title %}
+    Rose-Hulman ChE Lab
+{% endblock %}
+
+{% block body %}
+    <br>
+    <br>
+    <center>
+    <h3>Select the project that you are requesting data from</h3>
+
+    </center>
+    <br>
+    <form action = "{{ url_for('instrumentation') }}" method = "GET">
+        <br>
+        <center>
+        <select id="project" name="project" required onchange="buttonchange()">
+            <option value="">Select your Project</option>
+
+            <option value="100">100 - Filter Press</option>
+            <option value="150">150 - Reverse Osmosis</option>
+            <option value="200">200 - Corning Column</option>
+            <option value="250">250 - Agitated Tank</option>
+            <option value="300">300 - Fluid Flow</option>
+            <option value="400">400 - Instrumentation and Control</option>
+            <option value="500">500 - Tubular Reactor</option>
+            <option value="525">525 - Process Analytics</option>
+            <option value="650">650 - Cooling Tower</option>
+            <option value="700">700 - Control Pump</option>
+            <option value="750">750 - Tray Dryer</option>
+            <option value="800">800 - Multipass HX</option>
+            <option value="900">900 - Fluidized Bed</option>
+        </select>
+
+        <br>
+        <br>
+
+        <h5><input id="submitbutton" type="submit" value="Get Instruments" disabled=""></h5>
+        </center>
+    </form>
+
+    <style>
+        body{
+            background-color: #212121;
+            color: white
+        }
+    </style>
+
+
+    <script type="text/javascript">
+        function buttonchange() {
+            var submitbutton = document.getElementById("submitbutton");
+            if (document.getElementById("project").value != "") {
+                submitbutton.disabled = false;
+            }
+            else {
+                submitbutton.disabled = true;
+            }
+        }
+    </script>
+
+    <center>
+    <br><br>Written by Eddie Barry (RHIT ChE Class of 2022) and Dr. Dave
+    <br><br>Redesigned by Andrew Sander (RHIT ChE Class of 2026) and Benjamin Homan (RHIT ChE Class of 2025)
+    <br><br>Direct downloads are available at the /csv endpoint.
+    </center>
+
+{% endblock %}

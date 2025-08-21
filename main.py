@@ -2,10 +2,12 @@
 Rose-Hulman Chemical Engineering Data server web API
 David Henthorn, Chemical Engineering, 2022
 """
+from plotly.validators.surface.contours.x import project
 
 CONST_NAME = "CHE PI Data Portal"
 CONST_VER = "0.10"
-CONST_AUTHORS = "Eddie Barry (RHIT ChE, class of 2022) and David Henthorn, RHIT Professor"
+CONST_AUTHORS = ("Eddie Barry (RHIT ChE, class of 2022) and David Henthorn, RHIT Professor; "
+                 "Redesigned by Andrew Sander (RHIT ChE, class of 2026) and Benjamin Homan (RHIT ChE, class of 2025)")
 
 # Requires the PIconnect package be installed. This package will install under various OS's, but
 # it only functions on Windows machines with the PI SDK installed and properly setup
@@ -19,16 +21,46 @@ import logging
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', datefmt='%Y/%m/%d %H:%M:%S', level=logging.INFO)
 
-
+server = PI.PIServer()
+#We added this server definition here because we believe it is defined somewhere else when running in the terminal
+# and does not get used when running in the PyCharm console
 app = Flask(__name__)
-
-
+project = ""
 @app.route('/')
 @app.route('/home')
 def home():
     logging.info("New request for /home from %s", request.remote_addr)
     return render_template('home.html')
 
+@app.route('/project')
+def project():
+    logging.info("New request for /project from %s", request.remote_addr)
+    return render_template('project.html')
+
+@app.route('/instrumentation', methods=[ "GET" ])
+def instrumentation():
+    project = request.args.get("project")
+    logging.info("New request for /instrumentation from %s", request.remote_addr)
+    project_num = "*" + project + "*"
+    logging.info("Received request for project %s from IP %s", project, request.remote_addr)
+
+    if project_num =="*300*":
+        search_term = "*-3*"
+    else:
+        search_term = project_num
+
+    points = server.search(search_term)
+
+    if len(points) == 0:
+        logging.error("Found no PI datapoints for search term %s", search_term)
+        return render_template('instrumentation.html',
+                             error=f"Found no PI datapoints for search term: {search_term}")
+
+    else:
+        logging.info("Found %s PI points for project %s", len(points), project)
+        logging.info("Colecting instruments")
+        instruments = [f"{point.name}" for point in points]
+        return render_template('instrumentation.html', options=instruments, project=project)
 
 @app.route('/download', methods=["POST"])
 def download():
@@ -75,8 +107,8 @@ def download():
         # We frequently see columns returned full of "Shutdown" comments because na instrument no longer works.
         # If the entire column is full of those, delete the whole column.
 
-        #df.replace("Shutdown", np.nan, inplace=True)
-        logging.info("Replacing non-numeric entries") 
+        # df.replace("Shutdown", np.nan, inplace=True)
+        logging.info("Replacing non-numeric entries")
         df.replace("Shutdown", float(np.nan), inplace=True)
         df.dropna(how='all', axis=1, inplace=True)
 
@@ -86,6 +118,56 @@ def download():
         response.mimetype = 'text/csv'
         logging.info("Sending CSV file %s over http with response info %s", csvname, response)
         return response
+@app.route('/download2', methods=["POST"])
+def download2():
+    selected_instruments = request.form.getlist("instruments")
+    project = request.form.get("project")
+    logging.info("Received download request for project %s from IP %s", project, request.remote_addr)
+    date = request.form.get("start")
+    start_time = request.form.get("starttime")
+    end_time = request.form.get("endtime")
+    interval = request.form.get("interval")
+
+
+    project_start = date + " " + start_time
+    project_end = date + " " + end_time
+
+    points = server.search(selected_instruments)
+
+    logging.info("Requested dataset with start time of %s, end time of %s, and interval of %s",
+                 project_start, project_end, interval)
+
+
+   # logging.info("Found %s PI points for project %s", len(points), project)
+    logging.info("Concatenating")
+    df = pd.concat([
+        point.interpolated_values(project_start, project_end, interval).to_frame(
+            point.name + ' ' + point.units_of_measurement)
+        for point in points], axis=1)
+
+    logging.info("Cleaning and sorting scolumns")
+    df.index.rename('Timestamp', inplace=True)
+    df.sort_index(axis=1, inplace=True)
+
+    # The encoding is off. Temporary workaround is to write the dataframe as a CSV, which fixes the encoding. Then read it in.
+    df.to_csv("temp.csv")
+    df = pd.read_csv("temp.csv")
+
+    # We frequently see columns returned full of "Shutdown" comments because na instrument no longer works.
+    # If the entire column is full of those, delete the whole column.
+
+    #df.replace("Shutdown", np.nan, inplace=True)
+    logging.info("Replacing non-numeric entries")
+    df.replace("Shutdown", float(np.nan), inplace=True)
+    df.dropna(how='all', axis=1, inplace=True)
+
+    response = make_response(df.to_csv(date_format='%H:%M:%S'))
+    csvname = 'AREA' + project + '-' + date + '.csv'
+    #We can change the name of the downloaded csv file by changing the above line of code
+    response.headers['Content-Disposition'] = 'attachment; filename=' + csvname
+    response.mimetype = 'text/csv'
+    logging.info("Sending CSV file %s over http with response info %s", csvname, response)
+    return response
     
 
 @app.route('/csv', methods=['GET'])
