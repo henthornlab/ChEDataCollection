@@ -2,10 +2,9 @@
 Rose-Hulman Chemical Engineering Data server web API
 David Henthorn, Chemical Engineering, 2022
 """
-from plotly.validators.surface.contours.x import project
 
 CONST_NAME = "CHE PI Data Portal"
-CONST_VER = "0.10"
+CONST_VER = "0.20"
 CONST_AUTHORS = ("Eddie Barry (RHIT ChE, class of 2022) and David Henthorn, RHIT Professor; "
                  "Redesigned by Andrew Sander (RHIT ChE, class of 2026) and Benjamin Homan (RHIT ChE, class of 2025)")
 
